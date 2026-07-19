@@ -1,14 +1,16 @@
 import * as skills from "../library/skills.js";
 import settings from "../settings.js";
 import convoManager from "../conversation.js";
-import { readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const blueprintsPath = resolve(__dirname, '../../../blueprints.json');
+const blueprintsPath = resolve(__dirname, "../../../blueprints.json");
 let blueprints = {};
-try { blueprints = JSON.parse(readFileSync(blueprintsPath, 'utf8')); } catch (_) {}
+try {
+	blueprints = JSON.parse(readFileSync(blueprintsPath, "utf8"));
+} catch (_) {}
 
 function runAsAction(actionFn, resume = false, timeout = -1) {
 	let actionLabel = null; // Will be set on first use
@@ -450,21 +452,48 @@ export const actionsList = [
 		}),
 	},
 	{
+		name: "!clearArea",
+		description:
+			"Clear and level a rectangular area around the bot. Breaks all blocks in the given width and height range.",
+		params: {
+			width: {
+				type: "int",
+				description:
+					"Width of the area to clear (from center in each direction). Use 3 for a 7x7 area.",
+				domain: [1, 10],
+			},
+			clear_height: {
+				type: "int",
+				description:
+					"How many blocks high to clear (from ground up). Use 2-3 for leveling.",
+				domain: [1, 5],
+			},
+		},
+		perform: runAsAction(async (agent, width, clearHeight) => {
+			await skills.clearArea(agent.bot, width, clearHeight);
+		}),
+	},
+	{
 		name: "!buildStructure",
 		description:
-			'The MANDATORY tool for building structures (houses, walls, towers). MUST be used instead of !newAction for construction to ensure 3D accuracy. Pass the blueprint name to use.',
+			"The MANDATORY tool for building structures (houses, walls, towers). MUST be used instead of !newAction for construction to ensure 3D accuracy. Pass the blueprint name to use.",
 		params: {
 			blueprint_name: {
 				type: "string",
 				description:
-					'Blueprint name to use. Available blueprints: ' + Object.keys(blueprints).join(', ') + '. Each blueprint defines the shape and blocks for a structure.',
+					"Blueprint name to use. Available blueprints: " +
+					Object.keys(blueprints).join(", ") +
+					". Each blueprint defines the shape and blocks for a structure.",
 			},
 		},
 		perform: runAsAction(async (agent, blueprintName) => {
 			const blueprint = blueprints[blueprintName];
 			if (!blueprint) {
-				const available = Object.keys(blueprints).join(', ');
-				skills.log(agent.bot, `Unknown blueprint "${blueprintName}". Available: ${available}`);
+				const available = Object.keys(blueprints).join(", ");
+				skills.log(
+					agent.bot,
+					`Unknown blueprint "${blueprintName}". Available: ${available}`,
+				);
 				return `Unknown blueprint. Available: ${available}`;
 			}
 			await skills.buildStructure(agent.bot, blueprint);

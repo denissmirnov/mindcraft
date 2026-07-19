@@ -2522,6 +2522,38 @@ export async function useToolOnBlock(bot, toolName, block) {
 	return true;
 }
 
+export async function clearArea(bot, width, clearHeight) {
+	/**
+	 * Clear and level a rectangular area around the bot.
+	 * @param {MinecraftBot} bot - reference to the minecraft bot.
+	 * @param {number} width - radius from center in each direction (e.g. 3 = 7x7 area).
+	 * @param {number} clearHeight - how many blocks high to clear from ground up.
+	 */
+	const startPos = bot.entity.position.clone().floor();
+	const groundY = startPos.y - 1;
+
+	log(
+		bot,
+		`Clearing area: ${width * 2 + 1}x${clearHeight} around (${startPos.x}, ${groundY}, ${startPos.z})...`,
+	);
+
+	for (let x = -width; x <= width; x++) {
+		for (let z = -width; z <= width; z++) {
+			for (let y = 0; y < clearHeight; y++) {
+				const targetY = groundY + y;
+				const targetPos = startPos.offset(x, targetY, z);
+				const block = bot.blockAt(targetPos);
+				if (block && !["air", "cave_air", "void_air", "water", "lava"].includes(block.name)) {
+					await breakBlockAt(bot, targetPos.x, targetPos.y, targetPos.z);
+				}
+			}
+		}
+	}
+
+	log(bot, `Area cleared.`);
+	return true;
+}
+
 export async function buildStructure(bot, blueprint) {
 	/**
 	 * Builds a structure based on a blueprint, first clearing the building site.

@@ -3,7 +3,7 @@
 
     "model": {
         "api": "openai",
-        "model": "Qwen3.5-4B-MLX-4bit",
+        "model": "Qwen3.5-9B-MLX-4bit",
         "url": "http://localhost:7999/v1"
     }
 

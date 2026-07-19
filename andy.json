@@ -5,6 +5,8 @@
         "api": "openai",
         "model": "Qwen3.5-9B-MLX-4bit",
         "url": "http://localhost:7999/v1"
-    }
+    },
+
+    "self_prompt": false
 
 }

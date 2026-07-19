@@ -2543,7 +2543,10 @@ export async function clearArea(bot, width, clearHeight) {
 				const targetY = groundY + y;
 				const targetPos = startPos.offset(x, targetY, z);
 				const block = bot.blockAt(targetPos);
-				if (block && !["air", "cave_air", "void_air", "water", "lava"].includes(block.name)) {
+				if (
+					block &&
+					!["air", "cave_air", "void_air", "water", "lava"].includes(block.name)
+				) {
 					await breakBlockAt(bot, targetPos.x, targetPos.y, targetPos.z);
 				}
 			}

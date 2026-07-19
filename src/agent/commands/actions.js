@@ -459,14 +459,14 @@ export const actionsList = [
 			width: {
 				type: "int",
 				description:
-					"Width of the area to clear (from center in each direction). Use 3 for a 7x7 area.",
-				domain: [1, 10],
+					"Width of the area to clear (from center in each direction). Use 10 for a 21x21 area.",
+				domain: [1, 50],
 			},
 			clear_height: {
 				type: "int",
 				description:
 					"How many blocks high to clear (from ground up). Use 2-3 for leveling.",
-				domain: [1, 5],
+				domain: [1, 20],
 			},
 		},
 		perform: runAsAction(async (agent, width, clearHeight) => {

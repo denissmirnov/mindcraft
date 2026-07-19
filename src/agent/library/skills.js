@@ -2538,32 +2538,49 @@ export async function clearArea(bot, width, clearHeight) {
 		`Clearing area: ${width * 2 + 1}x${width * 2 + 1} from y=${botY} to y=${botY + clearHeight}...`,
 	);
 
+	// Pause conflicting modes to prevent interruption
+	const pausedModes = [];
+	const modesToPause = ["item_collecting", "torch_placing", "hunting"];
+	for (const mode of modesToPause) {
+		if (bot.modes.isOn(mode)) {
+			bot.modes.setOn(mode, false);
+			pausedModes.push(mode);
+		}
+	}
+
 	const minX = startPos.x - width;
 	const maxX = startPos.x + width;
 	const minZ = startPos.z - width;
 	const maxZ = startPos.z + width;
 	let broken = 0;
 
-	// Walk a grid pattern to load chunks, breaking blocks at each stop
-	for (let x = minX; x <= maxX; x += 16) {
-		for (let z = minZ; z <= maxZ; z += 16) {
-			await goToPosition(bot, x, botY, z, 2);
+	try {
+		// Walk a grid pattern to load chunks, breaking blocks at each stop
+		for (let x = minX; x <= maxX; x += 16) {
+			for (let z = minZ; z <= maxZ; z += 16) {
+				await goToPosition(bot, x, botY, z, 2);
 
-			// Scan and break blocks in this 16x16 patch
-			for (let cx = Math.max(x, minX); cx <= Math.min(x + 15, maxX); cx++) {
-				for (let cz = Math.max(z, minZ); cz <= Math.min(z + 15, maxZ); cz++) {
-					for (let cy = botY; cy <= botY + clearHeight; cy++) {
-						const block = bot.blockAt(Vec3(cx, cy, cz));
-						if (
-							block &&
-							!["air", "cave_air", "void_air", "water", "lava"].includes(block.name)
-						) {
-							await breakBlockAt(bot, cx, cy, cz);
-							broken++;
+				// Scan and break blocks in this 16x16 patch
+				for (let cx = Math.max(x, minX); cx <= Math.min(x + 15, maxX); cx++) {
+					for (let cz = Math.max(z, minZ); cz <= Math.min(z + 15, maxZ); cz++) {
+						for (let cy = botY; cy <= botY + clearHeight; cy++) {
+							const block = bot.blockAt(Vec3(cx, cy, cz));
+							if (
+								block &&
+								!["air", "cave_air", "void_air", "water", "lava"].includes(block.name)
+							) {
+								await breakBlockAt(bot, cx, cy, cz);
+								broken++;
+							}
 						}
 					}
 				}
 			}
+		}
+	} finally {
+		// Restore paused modes
+		for (const mode of pausedModes) {
+			bot.modes.setOn(mode, true);
 		}
 	}
 

@@ -2524,26 +2524,26 @@ export async function useToolOnBlock(bot, toolName, block) {
 
 export async function clearArea(bot, width, clearHeight) {
 	/**
-	 * Clear and level a rectangular area around the bot.
+	 * Clear blocks at the bot's Y level and above in a rectangular area.
 	 * @param {MinecraftBot} bot - reference to the minecraft bot.
-	 * @param {number} width - radius from center in each direction (e.g. 3 = 7x7 area).
-	 * @param {number} clearHeight - how many blocks high to clear from ground up.
+	 * @param {number} width - radius from center in each direction (e.g. 10 = 21x21 area).
+	 * @param {number} clearHeight - how many blocks HIGH to clear from bot level (e.g. 3 for trees/bushes).
 	 */
 	const startPos = bot.entity.position.clone().floor();
-	const groundY = startPos.y;
+	const botY = startPos.y;
 
 	log(
 		bot,
-		`Clearing area: ${width * 2 + 1}x${clearHeight} around (${startPos.x}, ${groundY}, ${startPos.z})...`,
+		`Clearing area: ${width * 2 + 1}x${width * 2 + 1} from y=${botY} to y=${botY + clearHeight}...`,
 	);
 
-	// Find all non-air blocks in the target volume
+	// Find all non-air blocks in the target volume (at bot level and ABOVE)
 	const minX = startPos.x - width;
 	const maxX = startPos.x + width;
 	const minZ = startPos.z - width;
 	const maxZ = startPos.z + width;
-	const minY = groundY - clearHeight;
-	const maxY = groundY;
+	const minY = botY;
+	const maxY = botY + clearHeight;
 
 	const blocksToBreak = bot.findBlocks({
 		matching: (block) => {

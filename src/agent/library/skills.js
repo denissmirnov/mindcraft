@@ -2530,26 +2530,37 @@ export async function clearArea(bot, width, clearHeight) {
 	 * @param {number} clearHeight - how many blocks high to clear from ground up.
 	 */
 	const startPos = bot.entity.position.clone().floor();
-	const groundY = startPos.y - 1;
+	const groundY = startPos.y;
 
 	log(
 		bot,
 		`Clearing area: ${width * 2 + 1}x${clearHeight} around (${startPos.x}, ${groundY}, ${startPos.z})...`,
 	);
 
-	for (let x = -width; x <= width; x++) {
-		for (let z = -width; z <= width; z++) {
-			for (let y = 0; y < clearHeight; y++) {
-				const targetY = groundY + y;
-				const targetPos = startPos.offset(x, targetY, z);
-				const block = bot.blockAt(targetPos);
-				if (
-					block &&
-					!["air", "cave_air", "void_air", "water", "lava"].includes(block.name)
-				) {
-					await breakBlockAt(bot, targetPos.x, targetPos.y, targetPos.z);
-				}
-			}
+	// Find all non-air blocks in the target volume
+	const minX = startPos.x - width;
+	const maxX = startPos.x + width;
+	const minZ = startPos.z - width;
+	const maxZ = startPos.z + width;
+	const minY = groundY - clearHeight;
+	const maxY = groundY;
+
+	const blocksToBreak = bot.findBlocks({
+		matching: (block) => {
+			return (
+				block &&
+				!["air", "cave_air", "void_air", "water", "lava"].includes(block.name)
+			);
+		},
+		maxDistance: width * 2 + 10,
+		count: (width * 2 + 1) * (width * 2 + 1) * clearHeight,
+	});
+
+	log(bot, `Found ${blocksToBreak.length} blocks to break.`);
+
+	for (const pos of blocksToBreak) {
+		if (pos.x >= minX && pos.x <= maxX && pos.z >= minZ && pos.z <= maxZ && pos.y >= minY && pos.y <= maxY) {
+			await breakBlockAt(bot, pos.x, pos.y, pos.z);
 		}
 	}
 

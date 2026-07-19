@@ -53,7 +53,10 @@ export class GPT {
 				}
 				let completion = await this.openai.chat.completions.create(pack);
 				if (!completion?.choices?.[0]) {
-					console.warn("Empty choices from model, raw:", JSON.stringify(completion));
+					console.warn(
+						"Empty choices from model, raw:",
+						JSON.stringify(completion),
+					);
 					throw new Error("Empty model response");
 				}
 				if (completion.choices[0].finish_reason == "length")

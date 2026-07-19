@@ -2537,9 +2537,12 @@ export async function buildStructure(bot, blueprint) {
 	log(bot, `Preparing building site at ${absOrigin}...`);
 
 	if (blueprint.blocks && blueprint.blocks.length > 0) {
-		let minX = Infinity, maxX = -Infinity;
-		let minY = Infinity, maxY = -Infinity;
-		let minZ = Infinity, maxZ = -Infinity;
+		let minX = Infinity,
+			maxX = -Infinity;
+		let minY = Infinity,
+			maxY = -Infinity;
+		let minZ = Infinity,
+			maxZ = -Infinity;
 
 		for (const b of blueprint.blocks) {
 			minX = Math.min(minX, b.x);
@@ -2555,7 +2558,7 @@ export async function buildStructure(bot, blueprint) {
 				for (let z = minZ; z <= maxZ; z++) {
 					const targetPos = absOrigin.offset(x, y, z);
 					const block = bot.blockAt(targetPos);
-					if (block && !['air', 'cave_air', 'void_air'].includes(block.name)) {
+					if (block && !["air", "cave_air", "void_air"].includes(block.name)) {
 						await breakBlockAt(bot, targetPos.x, targetPos.y, targetPos.z);
 					}
 				}

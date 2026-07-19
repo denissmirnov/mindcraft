@@ -1,6 +1,14 @@
 import * as skills from "../library/skills.js";
 import settings from "../settings.js";
 import convoManager from "../conversation.js";
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const blueprintsPath = resolve(__dirname, '../../../blueprints.json');
+let blueprints = {};
+try { blueprints = JSON.parse(readFileSync(blueprintsPath, 'utf8')); } catch (_) {}
 
 function runAsAction(actionFn, resume = false, timeout = -1) {
 	let actionLabel = null; // Will be set on first use
@@ -444,21 +452,22 @@ export const actionsList = [
 	{
 		name: "!buildStructure",
 		description:
-			'The MANDATORY tool for building structures (houses, walls, towers). MUST be used instead of !newAction for construction to ensure 3D accuracy. Blueprint is a JSON object with "origin" {x,y,z} and "blocks" [{x,y,z,block}, ...]. Origin is relative to bot.',
+			'The MANDATORY tool for building structures (houses, walls, towers). MUST be used instead of !newAction for construction to ensure 3D accuracy. Pass the blueprint name to use.',
 		params: {
-			blueprint: {
+			blueprint_name: {
 				type: "string",
-				description: 'The JSON blueprint. Example: {"origin":{"x":0,"y":0,"z":0},"blocks":[{"x":0,"y":0,"z":0,"block":"dirt"},{"x":1,"y":0,"z":0,"block":"dirt"}]}',
+				description:
+					'Blueprint name to use. Available blueprints: ' + Object.keys(blueprints).join(', ') + '. Each blueprint defines the shape and blocks for a structure.',
 			},
 		},
-		perform: runAsAction(async (agent, blueprintStr) => {
-			try {
-				const blueprint = JSON.parse(blueprintStr);
-				await skills.buildStructure(agent.bot, blueprint);
-			} catch (e) {
-				skills.log(agent.bot, `Error parsing blueprint: ${e.message}`);
-				return `Error parsing blueprint: ${e.message}`;
+		perform: runAsAction(async (agent, blueprintName) => {
+			const blueprint = blueprints[blueprintName];
+			if (!blueprint) {
+				const available = Object.keys(blueprints).join(', ');
+				skills.log(agent.bot, `Unknown blueprint "${blueprintName}". Available: ${available}`);
+				return `Unknown blueprint. Available: ${available}`;
 			}
+			await skills.buildStructure(agent.bot, blueprint);
 		}),
 	},
 	{

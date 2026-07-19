@@ -56,6 +56,9 @@ export class GPT {
 					throw new Error("Context length exceeded");
 				console.log("Received.");
 				const msg = completion.choices[0]?.message;
+				if (!msg?.content && !msg?.refusal) {
+					console.warn('Empty response from model, raw:', JSON.stringify(msg));
+				}
 				res =
 					msg?.content || msg?.refusal || "My brain disconnected, try again.";
 			}

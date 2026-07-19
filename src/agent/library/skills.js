@@ -2579,9 +2579,9 @@ export async function clearArea(bot, width, clearHeight) {
 		`Clearing area: ${width * 2 + 1}x${width * 2 + 1} from y=${botY} to y=${botY + clearHeight}...`,
 	);
 
-	// Pause conflicting modes to prevent interruption
+	// Pause ALL conflicting modes to prevent interruption
 	const pausedModes = [];
-	const modesToPause = ["item_collecting", "torch_placing", "hunting"];
+	const modesToPause = ["item_collecting", "torch_placing", "hunting", "unstuck", "self_preservation"];
 	for (const mode of modesToPause) {
 		if (bot.modes.isOn(mode)) {
 			bot.modes.setOn(mode, false);

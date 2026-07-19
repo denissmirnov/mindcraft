@@ -52,12 +52,16 @@ export class GPT {
 					delete pack.stop;
 				}
 				let completion = await this.openai.chat.completions.create(pack);
+				if (!completion?.choices?.[0]) {
+					console.warn("Empty choices from model, raw:", JSON.stringify(completion));
+					throw new Error("Empty model response");
+				}
 				if (completion.choices[0].finish_reason == "length")
 					throw new Error("Context length exceeded");
 				console.log("Received.");
-				const msg = completion.choices[0]?.message;
+				const msg = completion.choices[0].message;
 				if (!msg?.content && !msg?.refusal) {
-					console.warn('Empty response from model, raw:', JSON.stringify(msg));
+					console.warn("Empty response from model, raw:", JSON.stringify(msg));
 				}
 				res =
 					msg?.content || msg?.refusal || "My brain disconnected, try again.";

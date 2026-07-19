@@ -2558,9 +2558,20 @@ async function breakBlockForce(bot, x, y, z) {
 
 	// Equip best available tool, but don't skip if suboptimal
 	await bot.tool.equipForBlock(block);
-	await bot.dig(block, true);
-	log(bot, `Broke ${block.name} at ${x}, ${y}, ${z}.`);
-	return true;
+
+	// Dig with timeout to avoid hanging on hard blocks
+	const digPromise = bot.dig(block, true);
+	const timeoutPromise = new Promise((_, reject) =>
+		setTimeout(() => reject(new Error(`Timeout digging ${block.name}`)), 15000),
+	);
+	try {
+		await Promise.race([digPromise, timeoutPromise]);
+		log(bot, `Broke ${block.name} at ${x}, ${y}, ${z}.`);
+		return true;
+	} catch (err) {
+		log(bot, `Failed to break ${block.name} at ${x}, ${y}, ${z}: ${err.message}. Skipping.`);
+		return false;
+	}
 }
 
 export async function clearArea(bot, width, clearHeight) {
@@ -2612,12 +2623,14 @@ export async function clearArea(bot, width, clearHeight) {
 									block.name,
 								)
 							) {
-								await breakBlockForce(bot, cx, cy, cz);
-								broken++;
+								const result = await breakBlockForce(bot, cx, cy, cz);
+								if (result) broken++;
+								if (broken % 10 === 0) log(bot, `Progress: ${broken} blocks broken...`);
 							}
 						}
 					}
 				}
+				log(bot, `Patch (${x}, ${z}) done.`);
 			}
 		}
 	} finally {

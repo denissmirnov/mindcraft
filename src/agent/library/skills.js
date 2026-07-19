@@ -2522,10 +2522,51 @@ export async function useToolOnBlock(bot, toolName, block) {
 	return true;
 }
 
+async function breakBlockForce(bot, x, y, z) {
+	/**
+	 * Break a block at the given position, ignoring tool requirements.
+	 * Uses /setblock in cheat mode, otherwise digs with whatever is equipped.
+	 */
+	const block = bot.blockAt(Vec3(x, y, z));
+	if (!block || block.name === "air" || block.name === "water" || block.name === "lava") return false;
+
+	// Cheat mode: instant removal
+	if (bot.modes.isOn("cheat")) {
+		if (useDelay) {
+			await new Promise((resolve) => setTimeout(resolve, blockPlaceDelay));
+		}
+		bot.chat(`/setblock ${Math.floor(x)} ${Math.floor(y)} ${Math.floor(z)} air`);
+		log(bot, `Used /setblock to remove ${block.name} at ${x}, ${y}, ${z}.`);
+		return true;
+	}
+
+	// Creative mode: instant removal
+	if (bot.game.gameMode === "creative") {
+		await bot.dig(block, true);
+		log(bot, `Broke ${block.name} at ${x}, ${y}, ${z} (creative).`);
+		return true;
+	}
+
+	// Survival: approach and dig regardless of tool
+	if (bot.entity.position.distanceTo(block.position) > 4.5) {
+		const movements = new pf.Movements(bot);
+		movements.canPlaceOn = false;
+		movements.allow1by1towers = false;
+		bot.pathfinder.setMovements(movements);
+		await goToGoal(bot, new pf.goals.GoalNear(block.position.x, block.position.y, block.position.z, 4));
+	}
+
+	// Equip best available tool, but don't skip if suboptimal
+	await bot.tool.equipForBlock(block);
+	await bot.dig(block, true);
+	log(bot, `Broke ${block.name} at ${x}, ${y}, ${z}.`);
+	return true;
+}
+
 export async function clearArea(bot, width, clearHeight) {
 	/**
 	 * Clear blocks at the bot's Y level and above in a rectangular area.
-	 * Walks a grid pattern so chunks are loaded, then breaks blocks.
+	 * Walks a grid pattern so chunks are loaded, then breaks ALL blocks (including stone).
 	 * @param {MinecraftBot} bot - reference to the minecraft bot.
 	 * @param {number} width - radius from center in each direction (e.g. 10 = 21x21 area).
 	 * @param {number} clearHeight - how many blocks HIGH to clear from bot level (e.g. 3 for trees/bushes).
@@ -2567,9 +2608,11 @@ export async function clearArea(bot, width, clearHeight) {
 							const block = bot.blockAt(Vec3(cx, cy, cz));
 							if (
 								block &&
-								!["air", "cave_air", "void_air", "water", "lava"].includes(block.name)
+								!["air", "cave_air", "void_air", "water", "lava"].includes(
+									block.name,
+								)
 							) {
-								await breakBlockAt(bot, cx, cy, cz);
+								await breakBlockForce(bot, cx, cy, cz);
 								broken++;
 							}
 						}

@@ -2525,6 +2525,7 @@ export async function useToolOnBlock(bot, toolName, block) {
 export async function clearArea(bot, width, clearHeight) {
 	/**
 	 * Clear blocks at the bot's Y level and above in a rectangular area.
+	 * Walks a grid pattern so chunks are loaded, then breaks blocks.
 	 * @param {MinecraftBot} bot - reference to the minecraft bot.
 	 * @param {number} width - radius from center in each direction (e.g. 10 = 21x21 area).
 	 * @param {number} clearHeight - how many blocks HIGH to clear from bot level (e.g. 3 for trees/bushes).
@@ -2537,34 +2538,36 @@ export async function clearArea(bot, width, clearHeight) {
 		`Clearing area: ${width * 2 + 1}x${width * 2 + 1} from y=${botY} to y=${botY + clearHeight}...`,
 	);
 
-	// Find all non-air blocks in the target volume (at bot level and ABOVE)
 	const minX = startPos.x - width;
 	const maxX = startPos.x + width;
 	const minZ = startPos.z - width;
 	const maxZ = startPos.z + width;
-	const minY = botY;
-	const maxY = botY + clearHeight;
+	let broken = 0;
 
-	const blocksToBreak = bot.findBlocks({
-		matching: (block) => {
-			return (
-				block &&
-				!["air", "cave_air", "void_air", "water", "lava"].includes(block.name)
-			);
-		},
-		maxDistance: width * 2 + 10,
-		count: (width * 2 + 1) * (width * 2 + 1) * clearHeight,
-	});
+	// Walk a grid pattern to load chunks, breaking blocks at each stop
+	for (let x = minX; x <= maxX; x += 16) {
+		for (let z = minZ; z <= maxZ; z += 16) {
+			await goToPosition(bot, x, botY, z, 2);
 
-	log(bot, `Found ${blocksToBreak.length} blocks to break.`);
-
-	for (const pos of blocksToBreak) {
-		if (pos.x >= minX && pos.x <= maxX && pos.z >= minZ && pos.z <= maxZ && pos.y >= minY && pos.y <= maxY) {
-			await breakBlockAt(bot, pos.x, pos.y, pos.z);
+			// Scan and break blocks in this 16x16 patch
+			for (let cx = Math.max(x, minX); cx <= Math.min(x + 15, maxX); cx++) {
+				for (let cz = Math.max(z, minZ); cz <= Math.min(z + 15, maxZ); cz++) {
+					for (let cy = botY; cy <= botY + clearHeight; cy++) {
+						const block = bot.blockAt(Vec3(cx, cy, cz));
+						if (
+							block &&
+							!["air", "cave_air", "void_air", "water", "lava"].includes(block.name)
+						) {
+							await breakBlockAt(bot, cx, cy, cz);
+							broken++;
+						}
+					}
+				}
+			}
 		}
 	}
 
-	log(bot, `Area cleared.`);
+	log(bot, `Area cleared. Broke ${broken} blocks.`);
 	return true;
 }
 

@@ -8,6 +8,7 @@ export class AgentProcess {
     constructor(name, port) {
         this.name = name;
         this.port = port;
+        this._restartCount = 0;
     }
 
     start(load_memory=false, init_message=null, count_id=0) {
@@ -27,35 +28,47 @@ export class AgentProcess {
             stdio: 'inherit',
             stderr: 'inherit',
         });
-        
-        let last_restart = Date.now();
+
+        const onStart = Date.now();
         agentProcess.on('exit', (code, signal) => {
-            console.log(`Agent process exited with code ${code} and signal ${signal}`);
+            const uptime = Date.now() - onStart;
+            console.log(`Agent process exited with code ${code} and signal ${signal} (uptime: ${uptime}ms)`);
             this.running = false;
             logoutAgent(this.name);
-            
+
             if (code > 1) {
                 console.log(`Ending task`);
                 process.exit(code);
             }
 
             if (code !== 0 && signal !== 'SIGINT') {
-                // agent must run for at least 10 seconds before restarting
-                if (Date.now() - last_restart < 10000) {
-                    console.error(`Agent process exited too quickly and will not be restarted.`);
-                    return;
-                }
-                console.log('Restarting agent...');
-                this.start(true, 'Agent process restarted.', count_id, this.port);
-                last_restart = Date.now();
+                this._scheduleRestart(uptime, load_memory, count_id);
             }
         });
-    
+
         agentProcess.on('error', (err) => {
             console.error('Agent process error:', err);
         });
 
         this.process = agentProcess;
+    }
+
+    _scheduleRestart(uptimeMs, load_memory, count_id) {
+        // Exponential backoff: 3s → 6s → 12s → 30s (capped)
+        this._restartCount = Math.min(this._restartCount + 1, 5);
+        const delay = Math.min(3000 * Math.pow(2, this._restartCount - 1), 30000);
+
+        // If the agent ran at least 5 seconds, restart sooner
+        const fastRestart = uptimeMs >= 5000;
+        const actualDelay = fastRestart ? 3000 : delay;
+
+        if (fastRestart) this._restartCount = 1; // reset counter on healthy runs
+
+        console.log(`Reconnecting in ${actualDelay}ms (attempt ${this._restartCount})…`);
+        setTimeout(() => {
+            console.log('Restarting agent…');
+            this.start(true, 'Agent process restarted.', count_id, this.port);
+        }, actualDelay);
     }
 
     stop() {
